@@ -1,0 +1,10 @@
+{
+    "server_port": 8081,
+    "mysql": {
+        "host": "xxx",
+        "port": 3306,
+        "user": "mcp_rw",
+        "password": "xxx",
+        "database": "mcp"
+    }
+}

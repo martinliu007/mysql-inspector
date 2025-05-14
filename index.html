@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySQL巡检工具</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        .card {
+            margin-bottom: 20px;
+        }
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container mt-4">
+        <h1 class="mb-4">MySQL巡检工具</h1>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">表行数 Top 10</h5>
+                        <button class="btn btn-sm btn-primary" @click="fetchTopTables">刷新</button>
+                    </div>
+                    <div class="card-body">
+                        <div v-if="loading.topTables" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                        </div>
+                        <div v-else-if="error.topTables" class="alert alert-danger">
+                            {{ error.topTables }}
+                        </div>
+                        <div v-else-if="topTables.length === 0" class="alert alert-info">
+                            没有找到数据
+                        </div>
+                        <div v-else class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>表名</th>
+                                        <th>行数</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="table in topTables" :key="table.table_name">
+                                        <td>{{ table.table_name }}</td>
+                                        <td>{{ table.row_count }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">表引擎类型</h5>
+                        <button class="btn btn-sm btn-primary" @click="fetchNonInnoDBTables">刷新</button>
+                    </div>
+                    <div class="card-body">
+                        <div v-if="loading.nonInnoDBTables" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                        </div>
+                        <div v-else-if="error.nonInnoDBTables" class="alert alert-danger">
+                            {{ error.nonInnoDBTables }}
+                        </div>
+                        <div v-else-if="nonInnoDBTables.length === 0" class="alert alert-info">
+                            没有找到表信息
+                        </div>
+                        <div v-else class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>数据库</th>
+                                        <th>表名</th>
+                                        <th>引擎</th>
+                                        <th>行数</th>
+                                        <th>数据大小 (MB)</th>
+                                        <th>索引大小 (MB)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="table in nonInnoDBTables" :key="table.table_name">
+                                        <td>{{ table.table_schema }}</td>
+                                        <td>{{ table.table_name }}</td>
+                                        <td>{{ table.engine }}</td>
+                                        <td>{{ table.row_count }}</td>
+                                        <td>{{ (table.data_length / (1024 * 1024)).toFixed(2) }}</td>
+                                        <td>{{ (table.index_length / (1024 * 1024)).toFixed(2) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">表碎片信息</h5>
+                        <button class="btn btn-sm btn-primary" @click="fetchFragmentedTables">刷新</button>
+                    </div>
+                    <div class="card-body">
+                        <div v-if="loading.fragmentedTables" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                        </div>
+                        <div v-else-if="error.fragmentedTables" class="alert alert-danger">
+                            {{ error.fragmentedTables }}
+                        </div>
+                        <div v-else-if="fragmentedTables.length === 0" class="alert alert-info">
+                            没有找到表碎片信息
+                        </div>
+                        <div v-else class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>数据库</th>
+                                        <th>表名</th>
+                                        <th>碎片率 (%)</th>
+                                        <th>碎片大小 (MB)</th>
+                                        <th>数据大小 (MB)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="table in fragmentedTables" :key="table.table_name">
+                                        <td>{{ table.table_schema }}</td>
+                                        <td>{{ table.table_name }}</td>
+                                        <td>{{ table.fragment_ratio.toFixed(2) }}</td>
+                                        <td>{{ (table.data_free / (1024 * 1024)).toFixed(2) }}</td>
+                                        <td>{{ (table.data_length / (1024 * 1024)).toFixed(2) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        const app = createApp({
+            setup() {
+                const apiBaseUrl = 'http://localhost:8081/api';
+                
+                const topTables = ref([]);
+                const nonInnoDBTables = ref([]);
+                const fragmentedTables = ref([]);
+                
+                const loading = ref({
+                    topTables: false,
+                    nonInnoDBTables: false,
+                    fragmentedTables: false
+                });
+                
+                const error = ref({
+                    topTables: null,
+                    nonInnoDBTables: null,
+                    fragmentedTables: null
+                });
+                
+                const fetchTopTables = async () => {
+                    loading.value.topTables = true;
+                    error.value.topTables = null;
+                    
+                    try {
+                        const response = await axios.get(`${apiBaseUrl}/tables/top`);
+                        topTables.value = response.data;
+                    } catch (err) {
+                        console.error('获取表行数失败:', err);
+                        error.value.topTables = `获取表行数失败: ${err.message}`;
+                    } finally {
+                        loading.value.topTables = false;
+                    }
+                };
+                
+                const fetchNonInnoDBTables = async () => {
+                    loading.value.nonInnoDBTables = true;
+                    error.value.nonInnoDBTables = null;
+                    
+                    try {
+                        const response = await axios.get(`${apiBaseUrl}/tables/non-innodb`);
+                        nonInnoDBTables.value = response.data;
+                    } catch (err) {
+                        console.error('获取非InnoDB表失败:', err);
+                        error.value.nonInnoDBTables = `获取非InnoDB表失败: ${err.message}`;
+                    } finally {
+                        loading.value.nonInnoDBTables = false;
+                    }
+                };
+                
+                const fetchFragmentedTables = async () => {
+                    loading.value.fragmentedTables = true;
+                    error.value.fragmentedTables = null;
+                    
+                    try {
+                        const response = await axios.get(`${apiBaseUrl}/tables/fragmentation`);
+                        fragmentedTables.value = response.data;
+                    } catch (err) {
+                        console.error('获取表碎片率失败:', err);
+                        error.value.fragmentedTables = `获取表碎片率失败: ${err.message}`;
+                    } finally {
+                        loading.value.fragmentedTables = false;
+                    }
+                };
+                
+                onMounted(() => {
+                    fetchTopTables();
+                    fetchNonInnoDBTables();
+                    fetchFragmentedTables();
+                });
+                
+                return {
+                    topTables,
+                    nonInnoDBTables,
+                    fragmentedTables,
+                    loading,
+                    error,
+                    fetchTopTables,
+                    fetchNonInnoDBTables,
+                    fetchFragmentedTables
+                };
+            }
+        });
+        
+        app.mount('#app');
+    </script>
+</body>
+</html>
