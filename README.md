@@ -26,7 +26,7 @@ MySQL数据库巡检工具，用于检查和监控MySQL数据库的各项指标�
 
 1. 克隆项目
 ```bash
-git clone <repository-url>
+git clone https://github.com/martinliu007/mysql-inspector.git
 cd mysql-inspector
 ```
 
