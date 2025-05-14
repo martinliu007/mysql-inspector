@@ -43,28 +43,10 @@ go mod tidy
 go run cmd/main.go
 ```
 
-### 前端设置
-
-1. 进入web目录
-```bash
-cd web
-```
-
-2. 启动Web服务器
-可以使用任何静态文件服务器，例如：
-- Python 3:
-```bash
-python -m http.server 3000
-```
-- Node.js (需要安装 http-server):
-```bash
-npx http-server -p 3000
-```
-
-3. 访问Web界面
+5. 访问Web界面
 打开浏览器访问：
 ```
-http://localhost:3000
+http://localhost:8081
 ```
 
 ### 使用说明
