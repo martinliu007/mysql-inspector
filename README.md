@@ -6,7 +6,7 @@ MySQL数据库巡检工具，用于检查和监控MySQL数据库的各项指标�
 
 目前实现的功能：
 - 查询表行数Top 10
-- 非InnoDB表查询
+- 表引擎巡检
 - 表碎片率Top 10
 - Web界面展示
 
@@ -36,10 +36,6 @@ go mod tidy
 ```
 
 3. 配置数据库连接
-复制配置文件示例并修改：
-```bash
-cp config.json.example config.json
-```
 修改 `config.json` 中的数据库连接信息。
 
 4. 运行后端服务
